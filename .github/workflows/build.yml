@@ -1,0 +1,51 @@
+name: Build Android Library
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
+
+      - name: Create CMakeLists.txt
+        run: |
+          echo 'cmake_minimum_required(VERSION 3.10.2)' > CMakeLists.txt
+          echo 'project(killer)' >> CMakeLists.txt
+          echo 'file(GLOB_RECURSE SOURCES "*.c")' >> CMakeLists.txt
+          echo 'add_library(killer SHARED ${SOURCES})' >> CMakeLists.txt
+          echo 'find_library(log-lib log)' >> CMakeLists.txt
+          echo 'target_link_libraries(killer ${log-lib})' >> CMakeLists.txt
+
+      - name: Build with CMake
+        run: |
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            echo "Building for $abi..."
+            cmake -H. -Bbuild/$abi \
+              -DANDROID_ABI=$abi \
+              -DANDROID_PLATFORM=android-21 \
+              -DANDROID_NDK=$ANDROID_NDK_HOME \
+              -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+              -DCMAKE_BUILD_TYPE=Release
+            cmake --build build/$abi --config Release
+            mkdir -p output/$abi
+            cp build/$abi/libkiller.so output/$abi/
+          done
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: libkiller-so
+          path: output/
