@@ -24,7 +24,16 @@ jobs:
         run: |
           echo 'cmake_minimum_required(VERSION 3.10.2)' > CMakeLists.txt
           echo 'project(killer)' >> CMakeLists.txt
-          echo 'file(GLOB_RECURSE SOURCES "*.c")' >> CMakeLists.txt
+          
+          # Умный поиск исходников: исключаем папку build
+          echo 'file(GLOB_RECURSE ALL_SOURCES "*.c")' >> CMakeLists.txt
+          echo 'set(SOURCES "")' >> CMakeLists.txt
+          echo 'foreach(src ${ALL_SOURCES})' >> CMakeLists.txt
+          echo '  if(NOT src MATCHES "/build/")' >> CMakeLists.txt
+          echo '    list(APPEND SOURCES ${src})' >> CMakeLists.txt
+          echo '  endif()' >> CMakeLists.txt
+          echo 'endforeach()' >> CMakeLists.txt
+          
           echo 'add_library(killer SHARED ${SOURCES})' >> CMakeLists.txt
           echo 'find_library(log-lib log)' >> CMakeLists.txt
           echo 'target_link_libraries(killer ${log-lib})' >> CMakeLists.txt
